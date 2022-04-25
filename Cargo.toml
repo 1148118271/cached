@@ -7,7 +7,8 @@ edition = "2021"
 
 [workspace]
 members=[
-    "server"
+    "server",
+    "parse"
 ]
 
 [dependencies]

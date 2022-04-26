@@ -1,5 +1,3 @@
-use std::error::Error;
-
 pub mod set;
 
 #[derive(Debug)]

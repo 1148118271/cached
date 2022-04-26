@@ -1,5 +1,4 @@
 use tokio::io;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use parse::{Parse, Type};
 use parse::set::SetParse;
@@ -75,7 +74,7 @@ impl Server {
             s.readable().await?;
             match s.try_read(&mut buf) {
                 Ok(n) =>  bufs.extend_from_slice(&buf[..n]),
-                Err(e) => break
+                Err(_) => break
             }
         }
         let text = unsafe {

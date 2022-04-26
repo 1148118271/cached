@@ -48,7 +48,7 @@ impl Server {
                 Server::fail(s).await?;
             }
             Type::Get => {}
-            Type::Null => Server::write(s, b"1 FAIL.").await?
+            Type::Null => Server::fail(s).await?;
         }
         Ok(())
     }

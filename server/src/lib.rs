@@ -1,7 +1,8 @@
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use parse::Type;
+use parse::{Parse, Type};
+use parse::set::SetParse;
 
 
 pub struct Server(TcpListener);
@@ -38,16 +39,27 @@ impl Server {
 
 
     async fn handle(s: &mut TcpStream, text: &str) -> io::Result<()> {
-        let t = parse::Type::get_type(&text);
+        let t = Type::get_type(&text);
         match t {
             Type::Set => {
-                println!("set command.");
-                Server::write(s, b"0 SUCCESS.").await?
+                if let Ok(v) = SetParse::new(text) {
+                    buffer::set(v.key, v.value);
+                    Server::success(s).await?;
+                }
+                Server::fail(s).await?;
             }
             Type::Get => {}
             Type::Null => Server::write(s, b"1 FAIL.").await?
         }
         Ok(())
+    }
+
+    async fn success(s: &mut TcpStream) -> io::Result<()> {
+        Server::write(s, b"0 SUCCESS.").await
+    }
+
+    async fn fail(s: &mut TcpStream) -> io::Result<()> {
+        Server::write(s, b"1 FAIL.").await
     }
 
     async fn write(s: &mut TcpStream, buf: &[u8]) -> io::Result<()> {

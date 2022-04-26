@@ -12,5 +12,5 @@ members=[
 ]
 
 [dependencies]
-tokio = { version = "1.17.0", features = ["net", "macros", "rt-multi-thread"] }
+tokio = { version = "1.17.0", features = ["full"] }
 server = {path="./server"}

@@ -1,7 +1,16 @@
+use std::io::Write;
+use bytes::buf::Writer;
+use bytes::{BufMut, BytesMut};
 use tokio::io;
+use tokio::io::{AsyncWriteExt, Interest};
 use tokio::net::{TcpListener, TcpStream};
+use tokio_util::codec::{BytesCodec, Decoder};
+use tokio::sync::mpsc;
+use tokio_stream::StreamExt;
 use parse::{Parse, Type};
+use parse::get::GetParse;
 use parse::set::SetParse;
+
 
 
 pub struct Server(TcpListener);
@@ -19,19 +28,30 @@ impl Server {
             let (mut socket, addr) = self.0.accept().await?;
             println!("[{}] client connection.", addr);
             tokio::spawn(async move {
-                if let Err(e) = Server::write(&mut socket, b"200 HELLO.\r\n").await {
+
+                let mut framed = BytesCodec::new().framed(socket);
+                let x = framed.get_mut();
+                if let Err(e) = Server::write(x, b"200 HELLO").await {
                     eprintln!("write error, error info: {}", e);
                     return;
                 }
-                let text = match Server::read_string(&mut socket).await {
-                    Ok(text) => text,
-                    Err(e) => {
-                        eprintln!("read string error, error info: {}", e);
-                        return;
+                while let Some(message) = framed.next().await {
+                    match message {
+                        Ok(mut bytes) => {
+                            // let text = unsafe {
+                            //     String::from_utf8_unchecked(bytes.to_vec())
+                            // };
+                            println!("{:?}", bytes);
+                            x.write_all(b"ssss").await.unwrap();
+                            x.flush().await.unwrap();
+                            println!("writer")
+                            // let mut w: Writer<BytesMut> = bytes.writer();
+                            // Server::handle(&mut w, &text)
+                        }
+                        Err(err) => println!("Socket closed with error: {:?}", err),
                     }
-                };
-                Server::handle(&mut socket, &text).await.unwrap();
-                println!("[{}] disconnection connection.", addr);
+                }
+                println!("Socket received FIN packet and closed connection");
             });
         }
     }
@@ -48,7 +68,7 @@ impl Server {
                 Server::fail(s).await?;
             }
             Type::Get => {}
-            Type::Null => Server::fail(s).await?;
+            Type::Null => Server::fail(s).await?
         }
         Ok(())
     }
@@ -74,7 +94,10 @@ impl Server {
             s.readable().await?;
             match s.try_read(&mut buf) {
                 Ok(n) =>  bufs.extend_from_slice(&buf[..n]),
-                Err(_) => break
+                Err(e) => {
+                    println!("e > {}", e);
+                    break
+                }
             }
         }
         let text = unsafe {

@@ -14,13 +14,13 @@ fn c() {
     let mut s = [0; 128];
     let u = stream.read(&mut s).unwrap();
     println!("{:?}", String::from_utf8((&s[..u]).to_vec()).unwrap());
-    let mut string = String::new();
-    for _ in 0..1016 {
-        string = string.add("s");
-    }
-    let string1 = format!("set key {}", string);
-    stream.write_all(string1.as_bytes());
+    stream.write_all(b"set test gaoxiangkang");
     stream.flush();
     let u = stream.read(&mut s).unwrap();
     println!("{:?}", String::from_utf8((&s[..u]).to_vec()).unwrap());
+
+    // stream.write_all(b"get test").unwrap();
+    // stream.flush();
+    // let u = stream.read(&mut s).unwrap();
+    // println!("{:?}", String::from_utf8((&s[..u]).to_vec()).unwrap());
 }

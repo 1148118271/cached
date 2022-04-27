@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
+tokio-util = { version = "0.7.1", features = ["full"]}
+tokio-stream = "*"
+bytes = "1"
 parse = { path = "../parse" }
 buffer = { path = "../buffer" }

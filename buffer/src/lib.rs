@@ -3,8 +3,10 @@ use ahash::AHashMap;
 static mut S_BUFFER: Option<Box<AHashMap<String, String>>> = None;
 
 pub fn get(k: String) -> Option<String> {
-    new();
     unsafe {
+        if S_BUFFER.is_none() {
+            return None
+        }
         let map = S_BUFFER.as_ref().unwrap();
         match map.get(&k) {
             None => None,
@@ -23,8 +25,10 @@ pub fn set(k: String, v: String) {
 
 
 pub fn remove(k: String) -> Option<String> {
-    new();
     unsafe {
+        if S_BUFFER.is_none() {
+            return None
+        }
         let map = S_BUFFER.as_mut().unwrap();
         map.remove(&k)
     }

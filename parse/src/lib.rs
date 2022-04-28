@@ -16,7 +16,6 @@ impl Type {
             "get" => Type::Get,
             _ => Type::Null
         }
-
     }
 }
 

@@ -1,11 +1,11 @@
 use std::io::{Read, Write};
-use std::net::TcpStream;
-use std::ops::Add;
+use std::net::{Shutdown, TcpStream};
+
 
 #[tokio::main]
 async fn main() {
     let server = server::Server::new().await.unwrap();
-    server.run().await.unwrap();
+    server.run().await;
 }
 
 #[test]
@@ -18,9 +18,9 @@ fn c() {
     stream.flush();
     let u = stream.read(&mut s).unwrap();
     println!("{:?}", String::from_utf8((&s[..u]).to_vec()).unwrap());
-
-    // stream.write_all(b"get test").unwrap();
-    // stream.flush();
-    // let u = stream.read(&mut s).unwrap();
-    // println!("{:?}", String::from_utf8((&s[..u]).to_vec()).unwrap());
+    stream.write_all(b"get test").unwrap();
+    stream.flush();
+    let u = stream.read(&mut s).unwrap();
+    println!("{:?}", String::from_utf8((&s[..u]).to_vec()).unwrap());
+    stream.shutdown(Shutdown::Both).expect("shutdown call failed");
 }

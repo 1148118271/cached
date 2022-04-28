@@ -1,8 +1,4 @@
-use std::io::Write;
-use bytes::buf::Writer;
-use bytes::{BufMut, BytesMut};
 use tokio::io;
-use tokio::io::{AsyncWriteExt, Interest};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{BytesCodec, Decoder};
 use tokio::sync::mpsc;
@@ -25,84 +21,79 @@ impl Server {
     pub async fn run(&self) -> io::Result<()> {
         println!("server started.");
         loop {
-            let (mut socket, addr) = self.0.accept().await?;
+            let (socket, addr) = self.0.accept().await?;
             println!("[{}] client connection.", addr);
             tokio::spawn(async move {
-
                 let mut framed = BytesCodec::new().framed(socket);
-                let x = framed.get_mut();
-                if let Err(e) = Server::write(x, b"200 HELLO").await {
+                let stream = framed.get_ref();
+                if let Err(e) = Server::write(&stream, b"200 HELLO").await {
                     eprintln!("write error, error info: {}", e);
                     return;
                 }
                 while let Some(message) = framed.next().await {
                     match message {
-                        Ok(mut bytes) => {
-                            // let text = unsafe {
-                            //     String::from_utf8_unchecked(bytes.to_vec())
-                            // };
+                        Ok(bytes) => {
+                            let text = unsafe {
+                                String::from_utf8_unchecked(bytes.to_vec())
+                            };
                             println!("{:?}", bytes);
-                            x.write_all(b"ssss").await.unwrap();
-                            x.flush().await.unwrap();
-                            println!("writer")
-                            // let mut w: Writer<BytesMut> = bytes.writer();
-                            // Server::handle(&mut w, &text)
+                            let stream = framed.get_ref();
+                            if let Err(e) = Server::handle(stream, &text).await {
+                                eprintln!("handle data error, error info: {}", e);
+                                return;
+                            }
                         }
-                        Err(err) => println!("Socket closed with error: {:?}", err),
+                        Err(err) => {
+                            println!("socket closed with error: {:?}", err);
+                            return;
+                        }
                     }
                 }
-                println!("Socket received FIN packet and closed connection");
+                println!("socket closed")
             });
+            println!("线程结束");
         }
     }
 
 
-    async fn handle(s: &mut TcpStream, text: &str) -> io::Result<()> {
+    async fn handle(s: &TcpStream, text: &str) -> io::Result<()> {
         let t = Type::get_type(&text);
         match t {
             Type::Set => {
                 if let Ok(v) = SetParse::new(text) {
                     buffer::set(v.key, v.value);
                     Server::success(s).await?;
+                    return Ok(());
                 }
                 Server::fail(s).await?;
             }
-            Type::Get => {}
+            Type::Get => {
+                if let Ok(v) = GetParse::new(text) {
+                    match buffer::get(v.key) {
+                        None => Server::write(s, b"0").await?,
+                        Some(val) => Server::write(s, format!("0 {}", val).as_bytes()).await?
+                    }
+                    return Ok(());
+                }
+                Server::fail(s).await?;
+            }
             Type::Null => Server::fail(s).await?
         }
         Ok(())
     }
 
-    async fn success(s: &mut TcpStream) -> io::Result<()> {
+    async fn success(s: &TcpStream) -> io::Result<()> {
         Server::write(s, b"0 SUCCESS.").await
     }
 
-    async fn fail(s: &mut TcpStream) -> io::Result<()> {
+    async fn fail(s: &TcpStream) -> io::Result<()> {
         Server::write(s, b"1 FAIL.").await
     }
 
-    async fn write(s: &mut TcpStream, buf: &[u8]) -> io::Result<()> {
+    async fn write(s: &TcpStream, buf: &[u8]) -> io::Result<()> {
         s.writable().await?;
         s.try_write(buf)?;
         Ok(())
     }
 
-    async fn read_string(s: &mut TcpStream) -> io::Result<String> {
-        let mut buf = [0; 1024];
-        let mut bufs = vec![];
-        loop {
-            s.readable().await?;
-            match s.try_read(&mut buf) {
-                Ok(n) =>  bufs.extend_from_slice(&buf[..n]),
-                Err(e) => {
-                    println!("e > {}", e);
-                    break
-                }
-            }
-        }
-        let text = unsafe {
-            String::from_utf8_unchecked(bufs)
-        };
-        Ok(text)
-    }
 }

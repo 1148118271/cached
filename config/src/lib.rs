@@ -39,7 +39,6 @@ pub fn default() -> &'static Config {
     let args = std::env::args_os();
     if args.len() > 1 {
         let vec = args.collect::<Vec<OsString>>();
-        println!("{:?}", vec);
         path_buf = PathBuf::from(&vec[1]);
     } else {
         if let Ok(v) = std::env::current_dir() {

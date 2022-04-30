@@ -1,7 +1,6 @@
 use tokio::io;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::codec::{BytesCodec, Decoder};
-use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 use parse::{Parse, Type};
 use parse::get::GetParse;
@@ -16,21 +15,20 @@ impl Server {
     pub async fn new() -> io::Result<Server> {
         let conf = config::default();
         let url = format!("0.0.0.0:{}", conf.get_port());
-        log::info!("run server [{}]", url);
+        log::info!("[{}] server run.", url);
         let listener = TcpListener::bind(url).await?;
         Ok(Server(listener))
     }
 
     pub async fn run(&self) -> io::Result<()> {
-        println!("server started.");
         loop {
             let (socket, addr) = self.0.accept().await?;
-            println!("[{}] client connection.", addr);
+            log::info!("[{}] client connection.", addr);
             tokio::spawn(async move {
                 let mut framed = BytesCodec::new().framed(socket);
                 let stream = framed.get_ref();
                 if let Err(e) = Server::write(&stream, b"200 HELLO").await {
-                    eprintln!("write error, error info: {}", e);
+                    log::error!("write error, error info: {}", e);
                     return;
                 }
                 while let Some(message) = framed.next().await {
@@ -39,22 +37,20 @@ impl Server {
                             let text = unsafe {
                                 String::from_utf8_unchecked(bytes.to_vec())
                             };
-                            println!("{:?}", bytes);
+                            log::debug!("client => server [{:?}]", bytes);
                             let stream = framed.get_ref();
                             if let Err(e) = Server::handle(stream, &text).await {
-                                eprintln!("handle data error, error info: {}", e);
+                                log::error!("handle data error, error info: {}", e);
                                 return;
                             }
                         }
-                        Err(err) => {
-                            println!("socket closed with error: {:?}", err);
+                        Err(_) => {
                             return;
                         }
                     }
                 }
-                println!("socket closed")
+                log::info!("[{}] client closed.", addr);
             });
-            println!("线程结束");
         }
     }
 
@@ -94,6 +90,7 @@ impl Server {
     }
 
     async fn write(s: &TcpStream, buf: &[u8]) -> io::Result<()> {
+        log::debug!("server => client [b\"{}\"]", String::from_utf8(buf.to_vec()).expect("result info parse exception."));
         s.writable().await?;
         s.try_write(buf)?;
         Ok(())

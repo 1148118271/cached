@@ -4,6 +4,7 @@ use tokio_util::codec::{BytesCodec, Decoder};
 use tokio_stream::StreamExt;
 use parse::{Parse, Type};
 use parse::get::GetParse;
+use parse::remove::RmParse;
 use parse::set::SetParse;
 
 
@@ -27,7 +28,7 @@ impl Server {
             tokio::spawn(async move {
                 let mut framed = BytesCodec::new().framed(socket);
                 let stream = framed.get_ref();
-                if let Err(e) = Server::write(&stream, b"200 HELLO").await {
+                if let Err(e) = Server::write(&stream, b"200").await {
                     log::error!("write error, error info: {}", e);
                     return;
                 }
@@ -76,17 +77,27 @@ impl Server {
                 }
                 Server::fail(s).await?;
             }
-            Type::Null => Server::fail(s).await?
+            Type::Rm => {
+                if let Ok(v) = RmParse::new(text) {
+                    match buffer::remove(v.key) {
+                        None => Server::write(s, b"0").await?,
+                        Some(val) => Server::write(s, format!("0 {}", val).as_bytes()).await?
+                    }
+                    return Ok(());
+                }
+                Server::fail(s).await?;
+            }
+            Type::Null => Server::fail(s).await?,
         }
         Ok(())
     }
 
     async fn success(s: &TcpStream) -> io::Result<()> {
-        Server::write(s, b"0 SUCCESS.").await
+        Server::write(s, b"0").await
     }
 
     async fn fail(s: &TcpStream) -> io::Result<()> {
-        Server::write(s, b"1 FAIL.").await
+        Server::write(s, b"1").await
     }
 
     async fn write(s: &TcpStream, buf: &[u8]) -> io::Result<()> {

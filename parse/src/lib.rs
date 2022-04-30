@@ -1,10 +1,12 @@
 pub mod set;
 pub mod get;
+pub mod remove;
 
 #[derive(Debug)]
 pub enum Type {
     Set,
     Get,
+    Rm,
     Null
 }
 
@@ -14,6 +16,7 @@ impl Type {
         match *&n[0] {
             "set" => Type::Set,
             "get" => Type::Get,
+            "rm" => Type::Rm,
             _ => Type::Null
         }
     }

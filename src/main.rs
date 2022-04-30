@@ -4,8 +4,10 @@ use std::net::{Shutdown, TcpStream};
 
 #[tokio::main]
 async fn main() {
+    local_log::enable_logging();
+    log::debug!("开始启动项目");
     let server = server::Server::new().await.unwrap();
-    server.run().await;
+    server.run().await.unwrap();
 }
 
 #[test]

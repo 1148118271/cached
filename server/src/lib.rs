@@ -14,7 +14,10 @@ pub struct Server(TcpListener);
 
 impl Server {
     pub async fn new() -> io::Result<Server> {
-        let listener = TcpListener::bind("0.0.0.0:9200").await?;
+        let conf = config::default();
+        let url = format!("0.0.0.0:{}", conf.get_port());
+        log::info!("run server [{}]", url);
+        let listener = TcpListener::bind(url).await?;
         Ok(Server(listener))
     }
 

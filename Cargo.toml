@@ -9,9 +9,13 @@ edition = "2021"
 members=[
     "server",
     "parse",
-    "buffer"
+    "buffer",
+    "config",
+    "log",
 ]
 
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
-server = {path="./server"}
+server = { path="./server" }
+local_log = { path="./log" }
+log = "0.4"

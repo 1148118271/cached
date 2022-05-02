@@ -10,9 +10,19 @@ pub fn enable_logging() {
         "ERROR" => log::LevelFilter::Error,
         _ => log::LevelFilter::Debug,
     };
-    simple_logger::SimpleLogger::new()
-        .with_level(filter)
-        .with_module_level("my_crate", filter)
-        .init()
-        .unwrap();
+
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Local::now().format("[%Y-%m-%d %H:%M:%S]"),
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .level(filter)
+        .chain(std::io::stdout())
+        .chain(fern::log_file(conf.get_log_file_path()).expect("日志文件输出失败"))
+        .apply().expect("日志功能启用失败");
 }

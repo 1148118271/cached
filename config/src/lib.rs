@@ -4,9 +4,12 @@ use std::io::Read;
 use std::path::PathBuf;
 use toml::Value;
 
-
-const PORT: &str = "9000";
+/// 默认端口
+const PORT: &str = "9200";
+/// 默认日志级别
 const LOG_LEVEL: &str = "DEBUG";
+/// 默认日志路径
+const LOG_FILE_PATH: &str = "cached.log";
 
 const CONFIG_PATH: &str = "conf.toml";
 
@@ -15,7 +18,8 @@ static mut CONFIG:Option<Config> = None;
 #[derive(Debug)]
 pub struct Config {
     port: String,
-    log_level: String
+    log_level: String,
+    log_file_path: String
 }
 
 impl Config {
@@ -24,6 +28,9 @@ impl Config {
     }
     pub fn get_log_level(&self) -> &str {
         self.log_level.as_str()
+    }
+    pub fn get_log_file_path(&self) -> &str {
+        self.log_file_path.as_str()
     }
 }
 
@@ -50,13 +57,20 @@ pub fn default() -> &'static Config {
         let mut toml_str = String::new();
         if let Ok(_) = f.read_to_string(&mut toml_str) {
             if let Ok(v) = toml::from_str::<Value>(&toml_str) {
+                // 端口
                 let pv = Value::from(PORT);
                 let port = v.get("port").unwrap_or(&pv);
+                // 日志级别
                 let lv = Value::from(LOG_LEVEL);
                 let log_level = v.get("log_level").unwrap_or(&lv);
+                // 日志路径
+                let lfp = Value::from(LOG_FILE_PATH);
+                let log_file_path = v.get("log_file_path").unwrap_or(&lfp);
+
                 let config = Config {
                     port: port.as_str().unwrap_or(PORT).to_string(),
-                    log_level: log_level.as_str().unwrap_or(LOG_LEVEL).to_ascii_uppercase()
+                    log_level: log_level.as_str().unwrap_or(LOG_LEVEL).to_ascii_uppercase(),
+                    log_file_path: log_file_path.as_str().unwrap_or(LOG_FILE_PATH).to_string()
                 };
                 unsafe {
                     CONFIG = Some(config)
@@ -68,7 +82,8 @@ pub fn default() -> &'static Config {
         if CONFIG.is_none() {
             let config = Config {
                 port: PORT.to_string(),
-                log_level: LOG_LEVEL.to_ascii_uppercase()
+                log_level: LOG_LEVEL.to_ascii_uppercase(),
+                log_file_path: LOG_FILE_PATH.to_string()
             };
             CONFIG = Some(config)
         }

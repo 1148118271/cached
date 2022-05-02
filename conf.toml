@@ -1,2 +1,4 @@
 port = "9200"
+
 log_level = "debug"
+log_file_path = "/Users/gaoxiangkang/rust/code/cached/cached.log"
